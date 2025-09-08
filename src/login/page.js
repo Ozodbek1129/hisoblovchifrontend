@@ -8,6 +8,7 @@ import {
   Typography,
   Paper,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 
 export default function Login() {
@@ -18,12 +19,15 @@ export default function Login() {
     password: "",
   });
 
+  const [errorMessage, setErrorMessage] = useState(null); // ❗ Xatoni saqlash
+
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage(null); // ❗ Avvalgi xatoni tozalash
     try {
       const res = await loginUser(formData).unwrap();
       if (res.token) {
@@ -32,7 +36,14 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("Email yoki parol xato!");
+
+      // ❗ Backend xabarini chiqarish
+      const backendMessage =
+        Array.isArray(error?.data?.message)
+          ? error.data.message[0]
+          : error?.data?.message || error?.error || error?.message || "Email yoki parol xato!";
+
+      setErrorMessage(backendMessage);
     }
   };
 
@@ -48,6 +59,13 @@ export default function Login() {
         <Typography variant="h5" align="center" gutterBottom>
           Tizimga kirish
         </Typography>
+
+        {/* ❗ Backend xatoni ko‘rsatish */}
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit}>
           <TextField

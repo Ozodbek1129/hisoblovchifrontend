@@ -8,6 +8,7 @@ import {
   Typography,
   Paper,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 
 export default function Register() {
@@ -20,12 +21,15 @@ export default function Register() {
     password: "",
   });
 
+  const [errorMessage, setErrorMessage] = useState(null); // ❗ Backend xatoni saqlash
+
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage(null); // Har safar tozalab turamiz
     try {
       const res = await registerUser(formData).unwrap();
       if (res.token) {
@@ -34,7 +38,14 @@ export default function Register() {
       navigate("/");
     } catch (error) {
       console.error("Register error:", error);
-      alert("Xatolik yuz berdi!");
+
+      // ❗ Backenddan kelgan xatoni aniqlab ko‘rsatamiz
+      const backendMessage =
+        Array.isArray(error?.data?.message)
+          ? error.data.message[0]
+          : error?.data?.message || error?.error || error?.message || "Xatolik yuz berdi!";
+
+      setErrorMessage(backendMessage);
     }
   };
 
@@ -50,6 +61,13 @@ export default function Register() {
         <Typography variant="h5" align="center" gutterBottom>
           Ro‘yxatdan o‘tish
         </Typography>
+
+        {/* ❗ Backend xatoni ko‘rsatish */}
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit}>
           <TextField
@@ -99,11 +117,14 @@ export default function Register() {
             sx={{ mt: 2 }}
             disabled={isLoading}
           >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : "Ro‘yxatdan o‘tish"}
+            {isLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Ro‘yxatdan o‘tish"
+            )}
           </Button>
         </form>
 
-      
         <Typography
           variant="body2"
           align="center"

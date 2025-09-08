@@ -20,30 +20,35 @@ import {
   TextField,
   Container,
   Typography,
-  
+  Alert,
 } from "@mui/material";
 
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-
 function Home() {
   const navigate = useNavigate();
+  const [role, setRole] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
+  // ❗ Token tekshirish
   useEffect(() => {
     const token = localStorage.getItem("token");
-
+  
     if (!token) {
       navigate("/register");
       return;
     }
-
+  
     try {
       const decoded = jwtDecode(token);
-
+      console.log("Decoded token:", decoded); // 👈 roleni qayerdan kelishini ko‘rish
+  
       if (decoded.exp * 1000 < Date.now()) {
         localStorage.removeItem("token");
         navigate("/login");
+      } else {
+        setRole(decoded.role || decoded.user?.role || "user"); // har ikkisini tekshir
       }
     } catch (err) {
       console.error("Token noto‘g‘ri:", err);
@@ -51,12 +56,15 @@ function Home() {
       navigate("/login");
     }
   }, [navigate]);
+  
 
+  // RTK Query malumotlari
   const { data: malumotlar = [], isLoading } = useGetMalumotlarQuery();
   const [addMalumot] = useAddMalumotMutation();
   const [updateMalumot] = useUpdateMalumotMutation();
   const [deleteMalumot] = useDeleteMalumotMutation();
 
+  // Modal
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState(null);
 
@@ -78,6 +86,7 @@ function Home() {
   const [formData, setFormData] = useState(initialForm);
 
   const handleOpen = (malumot = null) => {
+    setErrorMessage(null);
     if (malumot) {
       setFormData({ ...malumot });
       setEditId(malumot.id || malumot.tartibRaqami);
@@ -116,8 +125,21 @@ function Home() {
       }
       handleClose();
     } catch (error) {
-      console.error(error);
-      alert(error?.data?.message || "Xatolik yuz berdi");
+      console.error("Backend xato:", error);
+
+      // ✅ xabarni to‘g‘ri olish
+      let backendMessage = "Xatolik yuz berdi";
+      if (Array.isArray(error?.data?.message)) {
+        backendMessage = error.data.message.join(", ");
+      } else if (typeof error?.data?.message === "string") {
+        backendMessage = error.data.message;
+      } else if (error?.error) {
+        backendMessage = error.error;
+      } else if (error?.message) {
+        backendMessage = error.message;
+      }
+
+      setErrorMessage(backendMessage);
     }
   };
 
@@ -126,26 +148,47 @@ function Home() {
       try {
         await deleteMalumot(id).unwrap();
         alert("O‘chirildi!");
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error("Delete xato:", error);
+
+        let backendMessage = "O‘chirishda xatolik yuz berdi";
+        if (Array.isArray(error?.data?.message)) {
+          backendMessage = error.data.message.join(", ");
+        } else if (typeof error?.data?.message === "string") {
+          backendMessage = error.data.message;
+        } else if (error?.error) {
+          backendMessage = error.error;
+        } else if (error?.message) {
+          backendMessage = error.message;
+        }
+
+        setErrorMessage(backendMessage);
       }
     }
   };
 
+
   if (isLoading) return <p>Yuklanmoqda...</p>;
 
   return (
- 
+    <Container maxWidth="xl" sx={{ mt: 4, px: 1 }}>
 
-    <Container sx={{ mt: 4 }}>
-      
       <Typography variant="h5" gutterBottom>
         Malumotlar ro‘yxati
       </Typography>
 
-      <Button variant="contained" color="primary" onClick={() => handleOpen()}>
-        Qo‘shish
-      </Button>
+      {/* Backend xato bo‘lsa Alert */}
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMessage}
+        </Alert>
+      )}
+
+      {(role === "user" || role === "admin") && (
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
+          Qo‘shish
+        </Button>
+      )}
 
       <Table sx={{ mt: 2 }}>
         <TableHead>
@@ -185,17 +228,26 @@ function Home() {
               <TableCell>{m.smart}</TableCell>
               <TableCell>{m.umumiySumma}</TableCell>
               <TableCell>
-                <Button onClick={() => handleOpen(m)} sx={{ mr: 1 }}>
-                  Edit
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="error"
-                  onClick={() => handleDelete(m.id || m.tartibRaqami)}
-                >
-                  Delete
-                </Button>
+                {role === "admin" && (
+                  <>
+                    <Button onClick={() => handleOpen(m)} sx={{ mr: 1 }}>
+                      Edit
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={() => handleDelete(m.id || m.tartibRaqami)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+                {role === "user" && (
+                  <Typography color="text.secondary" variant="body2">
+                    Faqat qo‘shish mumkin
+                  </Typography>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -217,6 +269,7 @@ function Home() {
                   "gazlashgan",
                   "ruxsatnoma",
                   "gazakt",
+                  "gazaktTrip",
                   "sugurta",
                   "texasmotr",
                   "davlatTolovi",
