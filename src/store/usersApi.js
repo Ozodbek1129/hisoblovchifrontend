@@ -11,15 +11,6 @@ export const usersApi = createApi({
       providesTags: ["User"],
     }),
 
-    // 🔹 Foydalanuvchi qo‘shish (register)
-    registerUser: builder.mutation({
-      query: (body) => ({
-        url: "/users/register",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["User"],
-    }),
 
     // 🔹 Tizimga kirish (login)
     loginUser: builder.mutation({
@@ -30,15 +21,7 @@ export const usersApi = createApi({
       }),
     }),
 
-    // 🔹 Foydalanuvchi yangilash
-    updateUser: builder.mutation({
-      query: ({ id, ...body }) => ({
-        url: `/users/${id}`,
-        method: "PATCH",
-        body,
-      }),
-      invalidatesTags: ["User"],
-    }),
+
 
     // 🔹 Foydalanuvchi o‘chirish
     deleteUser: builder.mutation({
